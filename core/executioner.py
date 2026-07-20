@@ -5,6 +5,7 @@ from utils import get_logger
 
 logger = get_logger(__name__)
 
+
 def execute (command: str, timeout: int | None = None) -> dict:
     """Executes a command and returns the output"""
     timeout = timeout or COMMAND_TIMEOUT
