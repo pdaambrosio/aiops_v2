@@ -1,4 +1,4 @@
-from .commands import COMANDOS_PERMITIDOS, CATEGORIAS_COMANDOS
+from .commands import ALLOWED_COMMANDS, CATEGORIAS_COMANDOS
 from .settings import (
     OLLAMA_BASE_URL,
     OLLAMA_MODEL,
@@ -15,7 +15,7 @@ from .settings import (
 )
 
 __all__ = [
-    "COMANDOS_PERMITIDOS",
+    "ALLOWED_COMMANDS",
     "CATEGORIAS_COMANDOS",
     "OLLAMA_BASE_URL",
     "OLLAMA_MODEL",

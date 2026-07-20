@@ -1,4 +1,4 @@
-COMANDOS_PERMITIDOS = {
+ALLOWED_COMMANDS = {
     # === SERVIÇOS ===
     "status_nginx": {
         "comando": "systemctl status nginx",
