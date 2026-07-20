@@ -28,7 +28,7 @@ Interprete o resultado em português, de forma objetiva:
 """
 
 
-def setup_human_analisys(question: str, tool: str, observation: str) -> str:
+def setup_human_analysis(question: str, tool: str, observation: str) -> str:
     """Draft a message in natural language for the analysis stage"""
     return (
         f"Pergunta do usuário: {question}\n\n"
