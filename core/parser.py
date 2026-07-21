@@ -46,7 +46,7 @@ def summarize_result(result: dict, max_lines: int = 40) -> dict:
         [
             result.get("stdout", ""),
             result.get("stderr", ""),
-            result.get("stdout", "") or "",
+            result.get("error", "") or "",
         ]
     )
 
