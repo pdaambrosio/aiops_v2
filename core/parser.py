@@ -59,3 +59,22 @@ def summarize_result(result: dict, max_lines: int = 40) -> dict:
         "alerts": alerts,
         "success": bool(result.get("success"))
     }
+
+# local test
+if __name__ == "__main__":
+    print(detect_alerts("tudo funcionando normalmente, sem problemas"))
+    print(detect_alerts("O time foi hypercritical sobre a decisão"))
+    print(detect_alerts("O prazo (deadline) do projeto é sexta-feira"))
+    print(detect_alerts("O valor foi calculado erroneamente pelo script"))
+    print()
+    print(summarize_result({"success": False, "stdout": "algo aqui", "stderr": "", "error": "Command timed out"}))
+    print(summarize_result({"success": True, "stdout": "tudo ok", "stderr": "warning irrelevante", "error": None}))
+    print(summarize_result({"success": False, "stdout": "", "stderr": "connection refused", "error": None}))
+    print(summarize_result({"success": True, "stdout": "", "stderr": "", "error": None}))
+    stdout = "\n".join(f"linha {i}" for i in range(60))
+    print(summarize_result({"success": True, "stdout": stdout, "stderr": "", "error": None}))
+    stdout = "\n".join(f"linha {i}" for i in range(5))
+    print(summarize_result({"success": True, "stdout": stdout, "stderr": "", "error": None}))
+    print(summarize_result( {"success": True, "stdout": "ok", "stderr": "", "error": None}))
+    print(summarize_result({"success": False, "stdout": "", "stderr": "", "error": "boom"}))
+    print(summarize_result({"success": True, "stdout": "tudo certo", "stderr": "connection refused", "error": None}))
