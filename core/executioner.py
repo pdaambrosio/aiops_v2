@@ -48,3 +48,12 @@ def execute (command: str, timeout: int | None = None) -> dict:
         "stderr": stderr,
         "error": None
     }
+
+# local test
+if __name__ == "__main__":
+    print(execute("echo hello world")) # success
+    print(execute("echo hello world", timeout=1)) # success
+    print(execute("ll", timeout=1)) # error returncode 127
+    print(execute("find / -iname test")) # timeout
+    print(execute("cat hello_world.txt")) # error returncode 1
+    print(execute("ping 192.168.0.1")) # timeout
