@@ -174,5 +174,5 @@ ALLOWED_COMMANDS = {
 }
 
 CATEGORIAS_COMANDOS: dict[str, list[str]] = {}
-for _nome, _cfg in COMANDOS_PERMITIDOS.items():
+for _nome, _cfg in ALLOWED_COMMANDS.items():
     CATEGORIAS_COMANDOS.setdefault(_cfg["categoria"], []).append(_nome)
