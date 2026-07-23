@@ -64,8 +64,3 @@ def mount_command(name: str, parameter: dict | None = None) -> str:
     logger.debug(f"Comando montado para {name}: {command}")
     return command
 
-
-# local test
-if "__main__" == __name__:
-    url = "https://google.com"
-    print(mount_command("curl_test", {"url": "https://google.com; rm -rf /"}))
