@@ -92,7 +92,6 @@ def test_mount_command_tool_inexistente_levanta_erro():
 
 
 def test_mount_command_parametro_faltando_levanta_erro():
-    """docker_logs exige 'container' -- não passar o dict/parametro deve falhar."""
     with pytest.raises(ValidationError):
         mount_command("docker_logs")
 
