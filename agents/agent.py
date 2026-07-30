@@ -33,13 +33,15 @@ class DiagnosticAgent:
         self.tools = build_tools()
         self.llm_with_tools = self.llm.bind_tools(self.tools)
 
-    def _select_tool(self, question: str) -> str | list[str | dict[Any, Any]]:
+    def _select_tool(self, question: str) -> list[Any]:
         """LLM select tool"""
         message = [
             SystemMessage(content=SYSTEM_CHOICE),
             HumanMessage(content=question)
         ]
-        return self.llm.invoke(message).content
+
+        response = self.llm_with_tools.invoke(message)
+        return response.tool_calls or []
 
     def _analyze(self, question: str, tool: str, observation: str) -> str | list[str | dict[Any, Any]]:
         """LLM analyze tool command"""
@@ -84,9 +86,9 @@ class DiagnosticAgent:
             result.analysis = "A ferramenta escolhida não é permitida."
             return result
 
-        result.command = resume["command"]
-        result.output = resume["output"]
-        result.alerts = resume["alerts"]
+        result.command = resume["comando"]
+        result.output = resume["texto"]
+        result.alerts = resume["alertas"]
 
         observation = _format_to_llm(resume)
         result.analysis = self._analyze(question, name, observation)
