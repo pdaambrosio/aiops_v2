@@ -10,8 +10,8 @@ from .settings import (
     LOG_LEVEL,
     LOG_FORMAT,
     DEBUG,
-    validar_configuracoes,
-    exibir_configuracoes,
+    validate_config,
+    show_configs,
 )
 
 __all__ = [
@@ -27,6 +27,6 @@ __all__ = [
     "LOG_LEVEL",
     "LOG_FORMAT",
     "DEBUG",
-    "validar_configuracoes",
-    "exibir_configuracoes",
+    "validate_config",
+    "show_configs",
 ]
