@@ -1,4 +1,4 @@
-from .commands import COMANDOS_PERMITIDOS, CATEGORIAS_COMANDOS
+from .commands import ALLOWED_COMMANDS, CATEGORIAS_COMANDOS
 from .settings import (
     OLLAMA_BASE_URL,
     OLLAMA_MODEL,
@@ -10,12 +10,12 @@ from .settings import (
     LOG_LEVEL,
     LOG_FORMAT,
     DEBUG,
-    validar_configuracoes,
-    exibir_configuracoes,
+    validate_config,
+    show_configs,
 )
 
 __all__ = [
-    "COMANDOS_PERMITIDOS",
+    "ALLOWED_COMMANDS",
     "CATEGORIAS_COMANDOS",
     "OLLAMA_BASE_URL",
     "OLLAMA_MODEL",
@@ -27,6 +27,6 @@ __all__ = [
     "LOG_LEVEL",
     "LOG_FORMAT",
     "DEBUG",
-    "validar_configuracoes",
-    "exibir_configuracoes",
+    "validate_config",
+    "show_configs",
 ]
