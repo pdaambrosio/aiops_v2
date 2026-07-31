@@ -87,8 +87,8 @@ class DiagnosticAgent:
             return result
 
         result.command = resume["comando"]
-        result.output = resume["texto"]
-        result.alerts = resume["alertas"]
+        result.output = resume["text"]
+        result.alerts = resume["alerts"]
 
         observation = _format_to_llm(resume)
         result.analysis = self._analyze(question, name, observation)
