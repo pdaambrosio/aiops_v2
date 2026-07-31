@@ -11,7 +11,7 @@ TESTS_DIR = PROJECT_ROOT / "tests"
 
 # Model LLM base (local)
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:latest")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.3"))
 OLLAMA_NUM_GPU = os.getenv("OLLAMA_NUM_GPU", "8")
 
@@ -28,10 +28,8 @@ LOG_FORMAT = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
 
-def validar_configuracoes() -> bool:
-    """
-    Verifica se o Ollama está acessível na URL configurada.
-    """
+def validate_config() -> bool:
+    """validate config"""
     try:
         import requests
 
@@ -45,8 +43,8 @@ def validar_configuracoes() -> bool:
         return False
 
 
-def exibir_configuracoes() -> None:
-    """Imprime as configurações"""
+def show_configs() -> None:
+    """show configs"""
     print("\nCONFIGURAÇÕES")
     print(f"  Ollama URL : {OLLAMA_BASE_URL}")
     print(f"  Modelo     : {OLLAMA_MODEL}")
