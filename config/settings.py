@@ -28,10 +28,8 @@ LOG_FORMAT = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
 
-def validar_configuracoes() -> bool:
-    """
-    Verifica se o Ollama está acessível na URL configurada.
-    """
+def validate_config() -> bool:
+    """validate config"""
     try:
         import requests
 
@@ -45,8 +43,8 @@ def validar_configuracoes() -> bool:
         return False
 
 
-def exibir_configuracoes() -> None:
-    """Imprime as configurações"""
+def show_configs() -> None:
+    """show configs"""
     print("\nCONFIGURAÇÕES")
     print(f"  Ollama URL : {OLLAMA_BASE_URL}")
     print(f"  Modelo     : {OLLAMA_MODEL}")
