@@ -93,3 +93,13 @@ class DiagnosticAgent:
         observation = _format_to_llm(resume)
         result.analysis = self._analyze(question, name, observation)
         return result
+
+
+# local test
+if __name__ == "__main__":
+    agent = DiagnosticAgent()
+    print(agent.diagnose("como está a memória?"))
+    print(agent.diagnose("me dá um panorama do servidor"))
+    print(agent.diagnose("o nginx está de pé?"))
+    print(agent.diagnose("e os containers?"))
+    print(agent.diagnose("apaga tudo aí"))
