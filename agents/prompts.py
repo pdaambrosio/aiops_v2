@@ -63,3 +63,19 @@ def setup_human_analysis(question: str, tool: str, observation: str) -> str:
         f"Comando executado (tool '{tool}'): \n{observation}\n\n"
         f"Analise o resultado e responda ao usuário"
     )
+
+
+def mount_human_choice(question: str, executed: list[str]) -> str:
+    """Draft a message in natural language for the analysis stage"""
+    base = f"Pergunta do usuário: {question}\n\n"
+
+    if executed:
+        executed_list = ", ".join(executed)
+        base += (
+            f"\n\nComandos já executados nesta investigação {executed_list}."
+            "\nEscolha a proxima tool mais útil (evite repetir as já executadas)."
+        )
+    return base
+
+
+#TODO: Next functions to decide another action and to end maybe the analysis!?
