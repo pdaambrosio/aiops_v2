@@ -56,8 +56,9 @@ foram executados, com suas análises. Escreva a resposta final em português:
 - Não invente dados que não estão no histórico.
 """
 
+
 def setup_human_analysis(question: str, tool: str, observation: str) -> str:
-    """Draft a message in natural language for the analysis stage"""
+    """Message of analys step"""
     return (
         f"Pergunta do usuário: {question}\n\n"
         f"Comando executado (tool '{tool}'): \n{observation}\n\n"
@@ -66,7 +67,7 @@ def setup_human_analysis(question: str, tool: str, observation: str) -> str:
 
 
 def mount_human_choice(question: str, executed: list[str]) -> str:
-    """Draft a message in natural language for the analysis stage"""
+    """Message of node decide_tool with history"""
     base = f"Pergunta do usuário: {question}\n\n"
 
     if executed:
@@ -78,4 +79,28 @@ def mount_human_choice(question: str, executed: list[str]) -> str:
     return base
 
 
-#TODO: Next functions to decide another action and to end maybe the analysis!?
+def mount_next_human_choice(question: str, history: list[dict]) -> str:
+    """Message of node next_decide with history"""
+    lines = [f"Pergunta original: {question}", "", "Investigação até agora:"]
+    for i, step in enumerate(history, start=1):
+        alerts = ", ".join(step.get("alertas") or []) or "nenhum"
+        lines.append(
+            f"{i}, tool={step['tool']} | alertas={alerts}\n"
+            f"   analise: {step['analise']}"
+        )
+
+    lines.append("\nPrecisa rodar mais um comando de diagnostico?")
+    return "\n".join(lines)
+
+
+def mount_end_human_choice(question: str, history: list[dict]) -> str:
+    """Message of node end with history"""
+    lines = [f"Pergunta do usuário: {question}", "", "Comandos executados:"]
+    for i, step in enumerate(history, start=1):
+        lines.append(
+            f"{i}, $ {step.get('comando')}\n"
+            f"   saída: {step.get('saida')}\n"
+            f"   analise: {step.get('analise')}"
+        )
+    lines.append("\nEscreva a resposta final consolidada ao usuário.")
+    return "\n".join(lines)
