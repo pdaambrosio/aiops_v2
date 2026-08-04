@@ -95,5 +95,59 @@ class AgentGraph:
             "iterações": state.get("iteration", 0) + 1
         }
 
+    def _n_validate(self, state: AgentState) -> dict:
+        """security validation"""
+        name = state["current_tool"]
+        args = state.get("current_args", {})
 
+        if name not in ALLOWED_COMMANDS:
+            return {"erro": f"Tool '{name}' fora da whitelist.", "comando_atual": None}
+
+        try:
+            command = mount_command(name, args)
+        except ValidationError as e:
+            logger.warning(f"validate: bloqueado - {e}")
+            return {"erro": str(e), "comando_atual": None}
+
+        return {"comando_atual": command, "erro": None}
+
+    def _n_execute(self, state: AgentState) -> dict:
+        """execute validate command and summarize the output"""
+        name = state["current_tool"]
+        cfg = ALLOWED_COMMANDS[name]
+        result = execute(state["current_command"], timeout=cfg.get("timeout"))
+        summary = summarize_result(result)
+        summary["comando"] = state["current_command"]
+        summary["tool"] = name
+
+        return {
+            "resumido_atual": summary,
+            "observacao_atual": _format_to_llm(summary)
+        }
+
+    def _n_analyze(self, state: AgentState) -> dict:
+        """the agent interprets the output of this command and logs the step"""
+        name = state["current_tool"]
+        summary = state["current_summary"]
+        message = [
+            SystemMessage(content=SYSTEM_ANALYSIS),
+            HumanMessage(
+                content=setup_human_analysis(
+                    state["question"],
+                    name,
+                    state["current_observation"]
+                )
+            )
+        ]
+
+        analysis = self.llm.invoke(message).content
+        step = {
+            "tool": name,
+            "comando": summary["comando"],
+            "saida": summary["texto"],
+            "alertas": summary["alertas"],
+            "analise": analysis
+        }
+
+        return {"historico": [step], "executados": [name]}
 
