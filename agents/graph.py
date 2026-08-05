@@ -168,3 +168,26 @@ class AgentGraph:
             return {"continuar": False}
 
     def _n_finalize(self, state: AgentState) -> dict:
+        """merge the history into the final response"""
+        history = state.get("history", [])
+        if not history:
+            error = state.get("error")
+            if error:
+                return {
+                    "resposta_final": f"Não consegui investigar: {error}"
+                }
+            return {
+                "resposta_final": (
+                    "Não consegui mapear sua pergunta para um commando de "
+                    "diagnostico conhecido. Tente reformular"
+                )
+            }
+        message = [
+            SystemMessage(content=SYSTEM_FINALIZE),
+            HumanMessage(
+                content=mount_end_human_choice(state["question"], history)
+            )
+        ]
+        response = self.llm.invoke(message).content
+        return {"resposta_final": response}
+
