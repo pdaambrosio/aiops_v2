@@ -83,12 +83,10 @@ class AgentGraph:
         if not tool_calls:
             logger.info("decide_tool: LLM não escolheu tool.")
             return {"tool_atual": None}
-
         choice = tool_calls[0]
         name = choice["name"]
         args = choice.get("args", {}) or {}
         logger.info(f"decide_tool: tool={name}, args={args}")
-
         return {
             "tool_atual": name,
             "args_atual": args,
@@ -99,16 +97,13 @@ class AgentGraph:
         """security validation"""
         name = state["current_tool"]
         args = state.get("current_args", {})
-
         if name not in ALLOWED_COMMANDS:
             return {"erro": f"Tool '{name}' fora da whitelist.", "comando_atual": None}
-
         try:
             command = mount_command(name, args)
         except ValidationError as e:
             logger.warning(f"validate: bloqueado - {e}")
             return {"erro": str(e), "comando_atual": None}
-
         return {"comando_atual": command, "erro": None}
 
     def _n_execute(self, state: AgentState) -> dict:
@@ -119,7 +114,6 @@ class AgentGraph:
         summary = summarize_result(result)
         summary["comando"] = state["current_command"]
         summary["tool"] = name
-
         return {
             "resumido_atual": summary,
             "observacao_atual": _format_to_llm(summary)
@@ -139,7 +133,6 @@ class AgentGraph:
                 )
             )
         ]
-
         analysis = self.llm.invoke(message).content
         step = {
             "tool": name,
@@ -148,6 +141,30 @@ class AgentGraph:
             "alertas": summary["alertas"],
             "analise": analysis
         }
-
         return {"historico": [step], "executados": [name]}
 
+    def _n_decide_next(self, state: AgentState) -> dict:
+        """agent decide if need run another command"""
+        if state.get("iteration", 0) >= self.max_iterations:
+            logger.info("decide_next: limite de iterações atingido")
+            return {"continuar": False}
+        message = [
+            SystemMessage(content=SYSTEM_DECIDE_NEXT),
+            HumanMessage(
+                content=mount_next_human_choice(
+                    state["question"],
+                    state["history"]
+                )
+            )
+        ]
+        try:
+            decision = self.llm.with_structured_output(NextDecison).invoke(message)
+            logger.info(
+                f"decide_next: precisa_main={decision.needs_more} ({decision.reason})"
+            )
+            return {"continuar": bool(decision.needs_more)}
+        except Exception as e: # noqa: BLE001
+            logger.warning(f"decide_next: falha na saída estruturada {e}; finalizando.")
+            return {"continuar": False}
+
+    def _n_finalize(self, state: AgentState) -> dict:
