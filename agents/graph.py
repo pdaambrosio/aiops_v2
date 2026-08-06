@@ -26,7 +26,7 @@ logger = get_logger(__name__)
 MAX_ITERATIONS = 3
 
 
-class NextDecison(BaseModel):
+class NextDecision(BaseModel):
     """Structured output node decide_next"""
     needs_more: bool = Field(description="Se é preciso rodar mais um comando.")
     reason: str = Field(description="Justificativa curta da decisão.")
@@ -158,7 +158,7 @@ class AgentGraph:
             )
         ]
         try:
-            decision = self.llm.with_structured_output(NextDecison).invoke(message)
+            decision = self.llm.with_structured_output(NextDecision).invoke(message)
             logger.info(
                 f"decide_next: precisa_main={decision.needs_more} ({decision.reason})"
             )
@@ -190,4 +190,66 @@ class AgentGraph:
         ]
         response = self.llm.invoke(message).content
         return {"resposta_final": response}
+
+    # conditionals
+    def _route_after_decide_tool(self, state: AgentState) -> str:
+        return "validate" if state.get("current_tool") else "finalize"
+
+    def _route_after_validate(self, state: AgentState) -> str:
+        return "finalize" if state.get("error") else "execute"
+
+    def _route_after_decide_next(self, state: AgentState) -> str:
+        if state.get("should_proceed") and state.get("iteration", 0) < self.max_iterations:
+            return "decide_tool"
+        return "finalize"
+
+    # build graph
+    def _build_graph(self):
+        b_graph = StateGraph(AgentState)
+        b_graph.add_node("decide_tool", self._n_decide_tool)
+        b_graph.add_node("validate", self._n_validate)
+        b_graph.add_node("execute", self._n_execute)
+        b_graph.add_node("analyze", self._n_analyze)
+        b_graph.add_node("decide_next", self._n_decide_next)
+        b_graph.add_node("finalize", self._n_finalize)
+
+        b_graph.set_entry_point("decide_tool")
+        b_graph.add_conditional_edges(
+            "decide_tool",
+            self._route_after_decide_tool,
+            {"validate": "validate", "finalize": "finalize"}
+        )
+        b_graph.add_conditional_edges(
+            "validate",
+            self._route_after_validate,
+            {"execute": "execute", "finalize": "finalize"}
+        )
+        b_graph.add_edge("execute", "analyze")
+        b_graph.add_edge("analyze", "decide_next")
+        b_graph.add_conditional_edges(
+            "decide_next",
+            self._route_after_decide_next,
+            {"decide_tool": "decide_tool", "finalize": "finalize"}
+        )
+        b_graph.add_edge("finalize", END)
+        return b_graph.compile()
+
+    def diagnose(self, question: str) -> DiagnosticResult:
+        initial_state: dict[str, Any] = {
+            "question": question,
+            "iteration": 0,
+            "history": [],
+            "executed": []
+        }
+        final = self.graph.invoke(
+            initial_state,
+            config={"recursion_limit": self.max_iterations * 6 + 5}
+        )
+        return DiagnosticResult(
+            question=question,
+            history=final.get("history", []),
+            iteration=final.get("iteration", 0),
+            final_answer=final.get("final_answer", ""),
+            error=final.get("error")
+        )
 
