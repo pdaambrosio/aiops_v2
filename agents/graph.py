@@ -88,9 +88,9 @@ class AgentGraph:
         args = choice.get("args", {}) or {}
         logger.info(f"decide_tool: tool={name}, args={args}")
         return {
-            "tool_atual": name,
-            "args_atual": args,
-            "iterações": state.get("iteration", 0) + 1
+            "current_tool": name,
+            "current_args": args,
+            "iteration": state.get("iteration", 0) + 1
         }
 
     def _n_validate(self, state: AgentState) -> dict:
@@ -141,7 +141,7 @@ class AgentGraph:
             "alertas": summary["alertas"],
             "analise": analysis
         }
-        return {"historico": [step], "executados": [name]}
+        return {"history": [step], "executed": [name]}
 
     def _n_decide_next(self, state: AgentState) -> dict:
         """agent decide if need run another command"""
@@ -162,10 +162,10 @@ class AgentGraph:
             logger.info(
                 f"decide_next: precisa_main={decision.needs_more} ({decision.reason})"
             )
-            return {"continuar": bool(decision.needs_more)}
+            return {"should_proceed": bool(decision.needs_more)}
         except Exception as e: # noqa: BLE001
             logger.warning(f"decide_next: falha na saída estruturada {e}; finalizando.")
-            return {"continuar": False}
+            return {"should_proceed": False}
 
     def _n_finalize(self, state: AgentState) -> dict:
         """merge the history into the final response"""
@@ -189,7 +189,7 @@ class AgentGraph:
             )
         ]
         response = self.llm.invoke(message).content
-        return {"resposta_final": response}
+        return {"final_answer": response}
 
     # conditionals
     def _route_after_decide_tool(self, state: AgentState) -> str:
