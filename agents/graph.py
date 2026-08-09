@@ -82,7 +82,7 @@ class AgentGraph:
         tool_calls = response.tool_calls or []
         if not tool_calls:
             logger.info("decide_tool: LLM não escolheu tool.")
-            return {"tool_atual": None}
+            return {"current_tool": None}
         choice = tool_calls[0]
         name = choice["name"]
         args = choice.get("args", {}) or {}
@@ -98,13 +98,13 @@ class AgentGraph:
         name = state["current_tool"]
         args = state.get("current_args", {})
         if name not in ALLOWED_COMMANDS:
-            return {"erro": f"Tool '{name}' fora da whitelist.", "comando_atual": None}
+            return {"erro": f"Tool '{name}' fora da whitelist.", "current_command": None}
         try:
             command = mount_command(name, args)
         except ValidationError as e:
             logger.warning(f"validate: bloqueado - {e}")
-            return {"erro": str(e), "comando_atual": None}
-        return {"comando_atual": command, "erro": None}
+            return {"erro": str(e), "current_command": None}
+        return {"current_command": command, "erro": None}
 
     def _n_execute(self, state: AgentState) -> dict:
         """execute validate command and summarize the output"""
@@ -115,8 +115,8 @@ class AgentGraph:
         summary["comando"] = state["current_command"]
         summary["tool"] = name
         return {
-            "resumido_atual": summary,
-            "observacao_atual": _format_to_llm(summary)
+            "current_summary": summary,
+            "current_observation": _format_to_llm(summary)
         }
 
     def _n_analyze(self, state: AgentState) -> dict:
@@ -147,7 +147,7 @@ class AgentGraph:
         """agent decide if need run another command"""
         if state.get("iteration", 0) >= self.max_iterations:
             logger.info("decide_next: limite de iterações atingido")
-            return {"continuar": False}
+            return {"should_proceed": False}
         message = [
             SystemMessage(content=SYSTEM_DECIDE_NEXT),
             HumanMessage(
@@ -174,10 +174,10 @@ class AgentGraph:
             error = state.get("error")
             if error:
                 return {
-                    "resposta_final": f"Não consegui investigar: {error}"
+                    "final_answer": f"Não consegui investigar: {error}"
                 }
             return {
-                "resposta_final": (
+                "final_answer": (
                     "Não consegui mapear sua pergunta para um commando de "
                     "diagnostico conhecido. Tente reformular"
                 )
