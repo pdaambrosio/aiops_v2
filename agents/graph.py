@@ -98,13 +98,13 @@ class AgentGraph:
         name = state["current_tool"]
         args = state.get("current_args", {})
         if name not in ALLOWED_COMMANDS:
-            return {"erro": f"Tool '{name}' fora da whitelist.", "current_command": None}
+            return {"error": f"Tool '{name}' fora da whitelist.", "current_command": None}
         try:
             command = mount_command(name, args)
         except ValidationError as e:
             logger.warning(f"validate: bloqueado - {e}")
-            return {"erro": str(e), "current_command": None}
-        return {"current_command": command, "erro": None}
+            return {"error": str(e), "current_command": None}
+        return {"current_command": command, "error": None}
 
     def _n_execute(self, state: AgentState) -> dict:
         """execute validate command and summarize the output"""
@@ -137,8 +137,8 @@ class AgentGraph:
         step = {
             "tool": name,
             "comando": summary["comando"],
-            "saida": summary["texto"],
-            "alertas": summary["alertas"],
+            "saida": summary["text"],
+            "alertas": summary["alerts"],
             "analise": analysis
         }
         return {"history": [step], "executed": [name]}
@@ -252,4 +252,3 @@ class AgentGraph:
             final_answer=final.get("final_answer", ""),
             error=final.get("error")
         )
-
