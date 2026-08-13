@@ -71,26 +71,56 @@ class AgentGraph:
         self.graph = self._build_graph()
 
     # nodes
+    # def _n_decide_tool(self, state: AgentState) -> dict:
+    #     """LLM choice the next tool"""
+    #     executed: list[str] | list[Any] = state.get("executed", [])
+    #     messages = [
+    #         SystemMessage(content=SYSTEM_CHOICE),
+    #         HumanMessage(content=mount_human_choice(state["question"], executed))
+    #     ]
+    #     response = self.llm_with_tools.invoke(messages)
+    #     tool_calls = response.tool_calls or []
+    #     if not tool_calls:
+    #         logger.info("decide_tool: LLM não escolheu tool.")
+    #         return {"current_tool": None}
+    #     choice = tool_calls[0]
+    #     name = choice["name"]
+    #     args = choice.get("args", {}) or {}
+    #     logger.info(f"decide_tool: tool={name}, args={args}")
+    #     return {
+    #         "current_tool": name,
+    #         "current_args": args,
+    #         "iteration": state.get("iteration", 0) + 1
+    #     }
+
     def _n_decide_tool(self, state: AgentState) -> dict:
-        """LLM choice the next tool"""
-        executed: list[str] | list[Any] = state.get("executed", [])
-        messages = [
+        executed = state.get("executed", [])
+        message = [
             SystemMessage(content=SYSTEM_CHOICE),
             HumanMessage(content=mount_human_choice(state["question"], executed))
         ]
-        response = self.llm_with_tools.invoke(messages)
+
+        response = self.llm_with_tools.invoke(message).content
         tool_calls = response.tool_calls or []
-        if not tool_calls:
-            logger.info("decide_tool: LLM não escolheu tool.")
-            return {"current_tool": None}
-        choice = tool_calls[0]
-        name = choice["name"]
-        args = choice.get("args", {}) or {}
-        logger.info(f"decide_tool: tool={name}, args={args}")
+        pending: list[dict] = []
+        checked = set(executed)
+
+        for tool in tool_calls:
+            name = tool["name"]
+            if name in checked:
+                continue
+            checked.add(name)
+            pending.append({"name": name, "args": tool.get("args", {}) or {}})
+
+        if not pending:
+            logger.info("decide_tool: nenhuma tool nova escolhida.")
+            return {"pendentes": []}
+
+        logger.info(f"decide_tool: {len(pending)} tool(s) -> {[p['name'] for p in pending]}")
+
         return {
-            "current_tool": name,
-            "current_args": args,
-            "iteration": state.get("iteration", 0) + 1
+            "pendentes": pending,
+            "iterações": state.get("decide_tool", 0) + 1
         }
 
     def _n_validate(self, state: AgentState) -> dict:
