@@ -38,7 +38,7 @@ Continue APENAS se um comando adicional trouxer informação claramente útil pa
 responder à pergunta (ex.: carga de CPU alta → detalhar os processos que mais
 consomem CPU; serviço inativo → olhar os logs desse serviço).
 
-Pare (precisa_mais=false) se:
+Pare (decide_next=False) se:
 - a pergunta já pode ser respondida com o que foi observado, ou
 - o próximo passo seria repetir um comando já executado.
 """
