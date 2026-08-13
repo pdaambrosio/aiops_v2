@@ -160,7 +160,7 @@ class AgentGraph:
         try:
             decision = self.llm.with_structured_output(NextDecision).invoke(message)
             logger.info(
-                f"decide_next: precisa_main={decision.needs_more} ({decision.reason})"
+                f"decide_next: {decision.needs_more} ({decision.reason})"
             )
             return {"should_proceed": bool(decision.needs_more)}
         except Exception as e: # noqa: BLE001
