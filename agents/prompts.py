@@ -27,6 +27,19 @@ Interprete o resultado em português, de forma objetiva:
 - Não invente dados que não estão na saída.
 """
 
+SYSTEM_ANALYSIS_MULTI = """
+Você é um especialista em infraestrutura Linux.
+
+Recebeu a pergunta de um usuário e a saída de VÁRIOS comandos de diagnóstico
+executados na mesma rodada. Interprete os resultados em português, de forma
+objetiva:
+
+- Comente cada comando em 1-2 frases, na ordem em que aparecem.
+- Se houver algum problema ou alerta, aponte claramente.
+- Se estiver tudo normal, diga que está tudo bem.
+- Não invente dados que não estão nas saídas.
+"""
+
 SYSTEM_DECIDE_NEXT = """
 Você é um agente de diagnóstico de infraestrutura Linux.
 
@@ -68,39 +81,57 @@ def setup_human_analysis(question: str, tool: str, observation: str) -> str:
 
 def mount_human_choice(question: str, executed: list[str]) -> str:
     """Message of node decide_tool with history"""
-    base = f"Pergunta do usuário: {question}\n\n"
+    if not executed:
+        return question
 
-    if executed:
-        executed_list = ", ".join(executed)
-        base += (
-            f"\n\nComandos já executados nesta investigação {executed_list}."
-            "\nEscolha a proxima tool mais útil (evite repetir as já executadas)."
-        )
-    return base
+    executed_list = ", ".join(executed)
+    return (
+        f"Pergunta do usuário: {question}\n\n"
+        f"Comandos já executados nesta investigação: {executed_list}.\n"
+        "Escolha a proxima tool mais útil (evite repetir as já executadas)."
+    )
 
 
-def mount_next_human_choice(question: str, history: list[dict]) -> str:
+def mount_human_analysis(question: str, observations: list[str]) -> str:
+    """Message of node analyze"""
+    lines = [f"Pergunta do usuário: {question}", "", "Comandos executados:"]
+    for observation in observations:
+        lines.append(f"\n{observation}")
+    lines.append("\nAnalise os resultados e responda ao usuário.")
+    return "\n".join(lines)
+
+
+def mount_next_human_choice(
+    question: str, history: list[dict], analyses: list[str] | tuple = ()
+) -> str:
     """Message of node next_decide with history"""
     lines = [f"Pergunta original: {question}", "", "Investigação até agora:"]
     for i, step in enumerate(history, start=1):
         alerts = ", ".join(step.get("alertas") or []) or "nenhum"
-        lines.append(
-            f"{i}, tool={step['tool']} | alertas={alerts}\n"
-            f"   analise: {step['analise']}"
-        )
+        lines.append(f"{i}, tool={step['tool']} | alertas={alerts}")
+
+    if analyses:
+        lines.append("\nAnálises:")
+        lines.extend(f"- {analysis}" for analysis in analyses)
 
     lines.append("\nPrecisa rodar mais um comando de diagnostico?")
     return "\n".join(lines)
 
 
-def mount_end_human_choice(question: str, history: list[dict]) -> str:
+def mount_end_human_choice(
+    question: str, history: list[dict], analyses: list[str] | tuple = ()
+) -> str:
     """Message of node end with history"""
     lines = [f"Pergunta do usuário: {question}", "", "Comandos executados:"]
     for i, step in enumerate(history, start=1):
         lines.append(
             f"{i}, $ {step.get('comando')}\n"
-            f"   saída: {step.get('saida')}\n"
-            f"   analise: {step.get('analise')}"
+            f"   saída: {step.get('saida')}"
         )
+
+    if analyses:
+        lines.append("\nAnálises:")
+        lines.extend(f"- {analysis}" for analysis in analyses)
+
     lines.append("\nEscreva a resposta final consolidada ao usuário.")
     return "\n".join(lines)
