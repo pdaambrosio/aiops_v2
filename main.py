@@ -10,13 +10,13 @@ logger = get_logger("aiops_v2")
 def _print_result(llm) -> None:
     print()
     for index, step in enumerate(llm.history, 1):
-        command = step.get("command") or step["tool"]
+        command = step.get("comando") or step["tool"]
         print(f"Passo {index}: {step['tool']} -> {command}")
 
-        if step.get("alerts"):
-            print(f"ALERTAS: {', '.join(step.get['alerts'])}")
+        if step.get("alertas"):
+            print(f"ALERTAS: {', '.join(step['alertas'])}")
 
-    if llm.error and not llm.success:
+    if llm.error:
         print(f"ERROR: {llm.error}")
 
     print(f"\n{llm.final_answer}")
