@@ -40,14 +40,19 @@ class AgentState(TypedDict, total=False):
     history: Annotated[list[dict], operator.add]
     executed: Annotated[list[str], operator.add]
     # current fields
-    current_tool: str | None
-    current_args: dict
-    current_command: str | None
-    current_observation: str
-    current_summary: dict
+    # current_tool: str | None
+    # current_args: dict
+    # current_command: str | None
+    # current_observation: str
+    # current_summary: dict
+    # fan-out tools
+    tools_pending: list[dict]
+    checked: list[dict]
+    errors: list[dict]
+    summary: list[dict]
     # control
     should_proceed: bool
-    error: str | None
+    # error: str | None
     final_answer: str
 
 
@@ -94,6 +99,7 @@ class AgentGraph:
     #     }
 
     def _n_decide_tool(self, state: AgentState) -> dict:
+        """LLM choice the next tool"""
         executed = state.get("executed", [])
         message = [
             SystemMessage(content=SYSTEM_CHOICE),
@@ -123,18 +129,40 @@ class AgentGraph:
             "iterações": state.get("decide_tool", 0) + 1
         }
 
+    # def _n_validate(self, state: AgentState) -> dict:
+    #     """security validation"""
+    #     name = state["current_tool"]
+    #     args = state.get("current_args", {})
+    #     if name not in ALLOWED_COMMANDS:
+    #         return {"error": f"Tool '{name}' fora da whitelist.", "current_command": None}
+    #     try:
+    #         command = mount_command(name, args)
+    #     except ValidationError as e:
+    #         logger.warning(f"validate: bloqueado - {e}")
+    #         return {"error": str(e), "current_command": None}
+    #     return {"current_command": command, "error": None}
+
     def _n_validate(self, state: AgentState) -> dict:
         """security validation"""
-        name = state["current_tool"]
-        args = state.get("current_args", {})
-        if name not in ALLOWED_COMMANDS:
-            return {"error": f"Tool '{name}' fora da whitelist.", "current_command": None}
-        try:
-            command = mount_command(name, args)
-        except ValidationError as e:
-            logger.warning(f"validate: bloqueado - {e}")
-            return {"error": str(e), "current_command": None}
-        return {"current_command": command, "error": None}
+        checked: list[dict] = []
+        errors: list[str] = []
+
+        for p in state.get("tools_pending", []):
+            name, args = p["name"], p.get("args", {})
+
+            if name not in ALLOWED_COMMANDS:
+                errors.append(f"Tool '{name}' fora da whitelist.")
+                continue
+
+            try:
+                command = mount_command(name, args)
+            except ValidationError as e:
+                logger.warning(f"validate: bloqueado '{name}' - {e}")
+                errors.append(f"{name}: {e}")
+                continue
+
+            checked.append({"name": name, "comando": command})
+        return {"validos": checked, "erros": errors}
 
     def _n_execute(self, state: AgentState) -> dict:
         """execute validate command and summarize the output"""
