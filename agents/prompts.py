@@ -44,16 +44,24 @@ SYSTEM_DECIDE_NEXT = """
 Você é um agente de diagnóstico de infraestrutura Linux.
 
 Já executou um ou mais comandos de investigação. Com base na pergunta original e
-no que foi observado, decida se precisa rodar MAIS UM comando de diagnóstico
-antes de dar a resposta final.
+no que foi observado, decida se precisa rodar MAIS comandos antes de responder.
 
-Continue APENAS se um comando adicional trouxer informação claramente útil para
-responder à pergunta (ex.: carga de CPU alta → detalhar os processos que mais
-consomem CPU; serviço inativo → olhar os logs desse serviço).
+Primeiro verifique a COBERTURA: liste cada assunto que a pergunta cita (cpu,
+memória, disco, rede, serviços, containers, logs, processos) e confira se cada
+um foi de fato investigado por algum comando.
 
-Pare (decide_next=False) se:
-- a pergunta já pode ser respondida com o que foi observado, ou
+Responda needs_more=true se:
+- algum assunto citado na pergunta ainda NÃO foi investigado (ex.: a pergunta
+  cita cpu, memória e disco, mas só houve comando de cpu), ou
+- um comando adicional aprofundaria um problema já detectado (ex.: carga de CPU
+  alta → detalhar os processos; serviço inativo → olhar os logs desse serviço).
+
+Responda needs_more=false apenas se:
+- todos os assuntos da pergunta já foram investigados, ou
 - o próximo passo seria repetir um comando já executado.
+
+Não responda false só porque já há material suficiente para escrever um texto:
+o critério é a cobertura da pergunta, não o tamanho da resposta.
 """
 
 SYSTEM_FINALIZE = """
@@ -67,6 +75,9 @@ foram executados, com suas análises. Escreva a resposta final em português:
 - Se houver problema, aponte a causa provável e uma recomendação prática.
 - Se estiver tudo bem, diga que está tudo normal.
 - Não invente dados que não estão no histórico.
+- Um comando com alerta 'comando_falhou' NÃO produziu dado: diga que aquele
+  ponto não pôde ser apurado. Nunca preencha a lacuna com a saída de outro
+  comando, e não afirme que não há alertas quando existem.
 """
 
 
@@ -124,9 +135,11 @@ def mount_end_human_choice(
     """Message of node end with history"""
     lines = [f"Pergunta do usuário: {question}", "", "Comandos executados:"]
     for i, step in enumerate(history, start=1):
+        alerts = ", ".join(step.get("alertas") or []) or "nenhum"
         lines.append(
             f"{i}, $ {step.get('comando')}\n"
-            f"   saída: {step.get('saida')}"
+            f"   saída: {step.get('saida')}\n"
+            f"   alertas: {alerts}"
         )
 
     if analyses:
