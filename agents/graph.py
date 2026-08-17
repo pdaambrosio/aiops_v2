@@ -18,7 +18,7 @@ from agents.prompts import (
     mount_end_human_choice
 )
 from agents.tools import _format_to_llm, build_tools
-from config import ALLOWED_COMMANDS
+from config import ALLOWED_COMMANDS, LLM_TOOL_TEMPERATURE
 from core import ValidationError, execute, mount_command, summarize_result
 from utils import get_logger
 
@@ -76,8 +76,9 @@ class AgentGraph:
         self.max_llm_retries = max_llm_retries
         self.max_parallel = max_parallel
         self.llm = get_llm()
+        self.llm_decision = get_llm(LLM_TOOL_TEMPERATURE)
         self.tools = build_tools()
-        self.llm_with_tools = self.llm.bind_tools(self.tools)
+        self.llm_with_tools = self.llm_decision.bind_tools(self.tools)
         self.graph = self._build_graph()
 
     def _invoke_with_retry(self, runnable: Any, message: list, label: str) -> Any | None:
@@ -205,7 +206,6 @@ class AgentGraph:
         ]
         response = self._invoke_with_retry(self.llm, message, "analyze")
         if response is None:
-            # os comandos já rodaram; segue sem a análise em vez de perdê-los
             return {
                 "history": steps,
                 "executed": names,
@@ -230,7 +230,7 @@ class AgentGraph:
             )
         ]
         decision = self._invoke_with_retry(
-            self.llm.with_structured_output(NextDecision), message, "decide_next"
+            self.llm_decision.with_structured_output(NextDecision), message, "decide_next"
         )
         if decision is None:
             logger.warning("decide_next: sem decisão do modelo; finalizando.")
