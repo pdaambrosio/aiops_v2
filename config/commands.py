@@ -78,11 +78,11 @@ ALLOWED_COMMANDS = {
         "timeout": 10,
     },
     "tamanho_diretorios": {
-        "comando": "du -sh /* 2>/dev/null | sort -h | tail -10",
+        "comando": "du -xsh /* 2>/dev/null | sort -h | tail -10",
         "descricao": "Top 10 diretórios maiores em /",
         "categoria": "disco",
         "seguranca": "alta",
-        "timeout": 30,
+        "timeout": 60,
     },
     "tamanho_logs": {
         "comando": "du -sh /var/log/* 2>/dev/null | sort -h",

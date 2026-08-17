@@ -67,37 +67,39 @@ def build_tools() -> list[StructuredTool]:
     logger.info(f"Geradas {len(tools)} tools dinâmicas da whitelist.")
     return tools
 
-# local tests
-import json
 
-## without parameter
-print(f"\n WITHOUT PARAMETER")
-result_execute_tool_command = execute_tool_command('memoria_livre')
-test_without_create_tool = _create_tool('memoria_livre', ALLOWED_COMMANDS['memoria_livre'])
-# print(json.dumps(result_execute_tool_command, indent=2, ensure_ascii=False))
-# print(_format_to_llm(result_execute_tool_command))
-print(test_without_create_tool.name)
-print(test_without_create_tool.description)
-print(test_without_create_tool.args)
-print(test_without_create_tool.args_schema)
-
-## with parameter
-print(f"\n WITH PARAMETER")
-parameter_result_execute_tool_command = execute_tool_command('curl_test', {'url':'https://www.google.com'})
-test_with_create_tool = _create_tool('curl_test', ALLOWED_COMMANDS['curl_test'])
-# print(json.dumps(parameter_result_execute_tool_command, indent=2, ensure_ascii=False))
-# print(_format_to_llm(parameter_result_execute_tool_command))
-print(test_with_create_tool.name)
-print(test_with_create_tool.description)
-print(test_with_create_tool.args)
-print(test_with_create_tool.args_schema)
-
-## with error
-print(f"\n WITH ERROR")
-error_execute_tool_command = execute_tool_command('status_nginx')
-test_error_create_tool = _create_tool('status_nginx', ALLOWED_COMMANDS['status_nginx'])
-# print(_format_to_llm(error_execute_tool_command))
-print(test_error_create_tool.name)
-print(test_error_create_tool.description)
-print(test_error_create_tool.args)
-print(test_error_create_tool.args_schema)
+if __name__ == "__main__":
+    # local tests
+    import json
+    
+    ## without parameter
+    print(f"\n WITHOUT PARAMETER")
+    result_execute_tool_command = execute_tool_command('memoria_livre')
+    test_without_create_tool = _create_tool('memoria_livre', ALLOWED_COMMANDS['memoria_livre'])
+    # print(json.dumps(result_execute_tool_command, indent=2, ensure_ascii=False))
+    # print(_format_to_llm(result_execute_tool_command))
+    print(test_without_create_tool.name)
+    print(test_without_create_tool.description)
+    print(test_without_create_tool.args)
+    print(test_without_create_tool.args_schema)
+    
+    ## with parameter
+    print(f"\n WITH PARAMETER")
+    parameter_result_execute_tool_command = execute_tool_command('curl_test', {'url':'https://www.google.com'})
+    test_with_create_tool = _create_tool('curl_test', ALLOWED_COMMANDS['curl_test'])
+    # print(json.dumps(parameter_result_execute_tool_command, indent=2, ensure_ascii=False))
+    # print(_format_to_llm(parameter_result_execute_tool_command))
+    print(test_with_create_tool.name)
+    print(test_with_create_tool.description)
+    print(test_with_create_tool.args)
+    print(test_with_create_tool.args_schema)
+    
+    ## with error
+    print(f"\n WITH ERROR")
+    error_execute_tool_command = execute_tool_command('status_nginx')
+    test_error_create_tool = _create_tool('status_nginx', ALLOWED_COMMANDS['status_nginx'])
+    # print(_format_to_llm(error_execute_tool_command))
+    print(test_error_create_tool.name)
+    print(test_error_create_tool.description)
+    print(test_error_create_tool.args)
+    print(test_error_create_tool.args_schema)
