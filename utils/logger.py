@@ -24,7 +24,7 @@ def configure_logger() -> None:
     _configured = True
 
 
-def get_logger(nome: str) -> logging.Logger:
+def get_logger(name: str) -> logging.Logger:
     """ Get a logger for the package """
     configure_logger()
-    return logging.getLogger(nome)
+    return logging.getLogger(name)
