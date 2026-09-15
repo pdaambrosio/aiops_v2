@@ -1,9 +1,10 @@
 import operator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any, Callable, TypedDict
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, StateGraph
+from langgraph.types import interrupt
 from pydantic import BaseModel, Field
 
 from agents.llm import get_llm
@@ -151,8 +152,39 @@ class AgentGraph:
                 errors.append(f"{name}: {e}")
                 continue
 
-            checked.append({"name": name, "comando": command})
+            checked.append({
+                "name": name,
+                "comando": command,
+                "seguranca": ALLOWED_COMMANDS[name]["seguranca"]
+            })
         return {"checked": checked, "errors": errors}
+
+    def _n_confirm(self, state: AgentState) -> dict:
+        """human-in-the-loop: 'alta'/'media' needs confirmation"""
+        checked =  state.get("checked", [])
+        auto = [c for c in checked if c["seguranca"] != "alta"]
+        pending = [c for c in checked if c["seguranca"] == "alta"]
+
+        if not pending:
+            return {}
+
+        payload = [
+            {"name": c["name"], "comando": c["comando"], "seguranca": c["seguranca"]}
+            for c in pending
+        ]
+
+        answer = interrupt(payload)
+        confirmed = str(answer).strip().lower() in {"s", "sim", "y", "yes"}
+
+        if confirmed:
+            logger.info(f"confirm: usuário aprovou {[c['name'] for c in pending]}")
+            return {"checked": auto + pending}
+
+        logger.info(f"confirm: usuário recusou {[c['name'] for c in pending]}")
+        return {
+            "checked": auto,
+            "errors": [f"{c["name"]}: execução não confirmada pelo usuário." for c in pending]
+        }
 
     def _execute_one(self, check: dict) -> dict:
         """Run a single validated command and summarize its output."""
