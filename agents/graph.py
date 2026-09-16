@@ -318,8 +318,9 @@ class AgentGraph:
         return "validate" if state.get("tools_pending") else "finalize"
 
     def _route_after_validate(self, state: AgentState) -> str:
-        """Runs whatever passed validation; a single blocked tool must not
-        abort the other tools of the same fan-out."""
+        return "execute" if state.get("checked") else "finalize"
+
+    def _route_after_confirm(self, state: AgentState) -> str:
         return "execute" if state.get("checked") else "finalize"
 
     def _route_after_decide_next(self, state: AgentState) -> str:
@@ -332,6 +333,7 @@ class AgentGraph:
         b_graph = StateGraph(AgentState)
         b_graph.add_node("decide_tool", self._n_decide_tool)
         b_graph.add_node("validate", self._n_validate)
+        b_graph.add_node("confirm", self._n_confirm)
         b_graph.add_node("execute", self._n_execute)
         b_graph.add_node("analyze", self._n_analyze)
         b_graph.add_node("decide_next", self._n_decide_next)
@@ -346,6 +348,11 @@ class AgentGraph:
         b_graph.add_conditional_edges(
             "validate",
             self._route_after_validate,
+            {"execute": "confirm", "finalize": "finalize"}
+        )
+        b_graph.add_conditional_edges(
+            "confirm",
+            self._route_after_confirm,
             {"execute": "execute", "finalize": "finalize"}
         )
         b_graph.add_edge("execute", "analyze")
