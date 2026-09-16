@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Annotated, Any, Callable, TypedDict
 from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.types import interrupt
 from pydantic import BaseModel, Field
@@ -72,15 +73,25 @@ class AgentGraph:
         max_iterations: int = MAX_ITERATIONS,
         max_llm_retries: int = MAX_LLM_RETRIES,
         max_parallel: int = MAX_PARALLEL_COMMANDS,
+        confirm_callback: Callable[[list[dict]], str] | None = None
     ) -> None:
         self.max_iterations = max_iterations
         self.max_llm_retries = max_llm_retries
         self.max_parallel = max_parallel
+        self.confirm_callback = confirm_callback or self._default_confirm_callback
         self.llm = get_llm()
         self.llm_decision = get_llm(LLM_TOOL_TEMPERATURE)
         self.tools = build_tools()
         self.llm_with_tools = self.llm_decision.bind_tools(self.tools)
+        self.checkpointer = MemorySaver()
         self.graph = self._build_graph()
+
+    @staticmethod
+    def _default_confirm_callback(pending: list[dict]) -> str:
+        print("\nComandos que exigem confirmação antes de executar:")
+        for c in pending:
+            print(f"  - {c['name']} (seguranca={c['seguranca']}): $ {c['comando']}")
+        return input("Confirma a execução? [s/n] ").strip().lower()
 
     def _invoke_with_retry(self, runnable: Any, message: list, label: str) -> Any | None:
         """Invoke the LLM retrying on transient backend failures"""
@@ -363,7 +374,7 @@ class AgentGraph:
             {"decide_tool": "decide_tool", "finalize": "finalize"}
         )
         b_graph.add_edge("finalize", END)
-        return b_graph.compile()
+        return b_graph.compile(checkpointer=self.checkpointer)
 
     def diagnose(self, question: str) -> DiagnosticResult:
         initial_state: dict[str, Any] = {
