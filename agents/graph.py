@@ -2,10 +2,12 @@ import operator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Annotated, Any, Callable, TypedDict
+from uuid import uuid4
+
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.types import Command, interrupt
 from langgraph.graph import END, StateGraph
-from langgraph.types import interrupt
 from pydantic import BaseModel, Field
 
 from agents.llm import get_llm
@@ -385,16 +387,24 @@ class AgentGraph:
             "errors": [],
             "analyses": []
         }
-        final = self.graph.invoke(
-            initial_state,
-            config={"recursion_limit": self.max_iterations * 6 + 5}
-        )
-        errors = final.get("errors", [])
+
+        config = {
+            "configurable": {"thread_id": str(uuid4())},
+            "recursion_limit": self.max_iterations * 7 + 5
+        }
+
+        result = self.graph.invoke(initial_state, config=config)
+        while "__interrupt__" in result:
+            payload = result["__interrupt__"][0].value
+            answer = self.confirm_callback(payload)
+            result = self.graph.invoke(Command(resume=answer), config=config)
+
+        errors = result.get("errors", [])
         return DiagnosticResult(
             question=question,
-            history=final.get("history", []),
-            analyses=final.get("analyses", []),
-            iteration=final.get("iteration", 0),
-            final_answer=final.get("final_answer", ""),
+            history=result.get("history", []),
+            analyses=result.get("analyses", []),
+            iteration=result.get("iteration", 0),
+            final_answer=result.get("final_answer", ""),
             error="; ".join(errors) if errors else None
         )
