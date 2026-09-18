@@ -99,7 +99,7 @@ class AgentGraph:
         """Invoke the LLM retrying on transient backend failures"""
         for attempt in range(1, self.max_llm_retries + 1):
             try:
-                return runnable.invoke(message)
+                return runnable.invoke(message, stream=False)
             except Exception as e:  # noqa: BLE001
                 logger.warning(
                     f"{label}: falha do LLM "
