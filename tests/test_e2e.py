@@ -60,3 +60,14 @@ def test_confirm_approve_tool(agent_confirm_all):
     assert result.error is None
     assert result.final_answer.strip()
 
+
+def test_confirm_reject(agent_reject_all):
+    result = agent_reject_all.diagnose("verifique se o ip 8.8.8.8 está respondendo")
+
+    for tool in {s["tool"] for s in result.history}:
+        assert ALLOWED_COMMANDS[tool]["seguranca"] != "alta", (
+            f"{tool} é 'alta' e não deveria ter executado -- confirmação foi recusada"
+        )
+
+    if result.error:
+        assert "não confirmada" in result.error
