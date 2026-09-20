@@ -1,8 +1,12 @@
 import operator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any, Callable, TypedDict
+from uuid import uuid4
+
 from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.types import Command, interrupt
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel, Field
 
@@ -71,21 +75,31 @@ class AgentGraph:
         max_iterations: int = MAX_ITERATIONS,
         max_llm_retries: int = MAX_LLM_RETRIES,
         max_parallel: int = MAX_PARALLEL_COMMANDS,
+        confirm_callback: Callable[[list[dict]], str] | None = None
     ) -> None:
         self.max_iterations = max_iterations
         self.max_llm_retries = max_llm_retries
         self.max_parallel = max_parallel
+        self.confirm_callback = confirm_callback or self._default_confirm_callback
         self.llm = get_llm()
         self.llm_decision = get_llm(LLM_TOOL_TEMPERATURE)
         self.tools = build_tools()
         self.llm_with_tools = self.llm_decision.bind_tools(self.tools)
+        self.checkpointer = MemorySaver()
         self.graph = self._build_graph()
+
+    @staticmethod
+    def _default_confirm_callback(pending: list[dict]) -> str:
+        print("\nComandos que exigem confirmação antes de executar:")
+        for c in pending:
+            print(f"  - {c['name']} (seguranca={c['seguranca']}): $ {c['comando']}")
+        return input("Confirma a execução? [s/n] ").strip().lower()
 
     def _invoke_with_retry(self, runnable: Any, message: list, label: str) -> Any | None:
         """Invoke the LLM retrying on transient backend failures"""
         for attempt in range(1, self.max_llm_retries + 1):
             try:
-                return runnable.invoke(message)
+                return runnable.invoke(message, stream=False)
             except Exception as e:  # noqa: BLE001
                 logger.warning(
                     f"{label}: falha do LLM "
@@ -151,8 +165,39 @@ class AgentGraph:
                 errors.append(f"{name}: {e}")
                 continue
 
-            checked.append({"name": name, "comando": command})
+            checked.append({
+                "name": name,
+                "comando": command,
+                "seguranca": ALLOWED_COMMANDS[name]["seguranca"]
+            })
         return {"checked": checked, "errors": errors}
+
+    def _n_confirm(self, state: AgentState) -> dict:
+        """human-in-the-loop: 'alta'/'media' needs confirmation"""
+        checked =  state.get("checked", [])
+        auto = [c for c in checked if c["seguranca"] != "alta"]
+        pending = [c for c in checked if c["seguranca"] == "alta"]
+
+        if not pending:
+            return {}
+
+        payload = [
+            {"name": c["name"], "comando": c["comando"], "seguranca": c["seguranca"]}
+            for c in pending
+        ]
+
+        answer = interrupt(payload)
+        confirmed = str(answer).strip().lower() in {"s", "sim", "y", "yes"}
+
+        if confirmed:
+            logger.info(f"confirm: usuário aprovou {[c['name'] for c in pending]}")
+            return {"checked": auto + pending}
+
+        logger.info(f"confirm: usuário recusou {[c['name'] for c in pending]}")
+        return {
+            "checked": auto,
+            "errors": [f"{c["name"]}: execução não confirmada pelo usuário." for c in pending]
+        }
 
     def _execute_one(self, check: dict) -> dict:
         """Run a single validated command and summarize its output."""
@@ -286,8 +331,9 @@ class AgentGraph:
         return "validate" if state.get("tools_pending") else "finalize"
 
     def _route_after_validate(self, state: AgentState) -> str:
-        """Runs whatever passed validation; a single blocked tool must not
-        abort the other tools of the same fan-out."""
+        return "execute" if state.get("checked") else "finalize"
+
+    def _route_after_confirm(self, state: AgentState) -> str:
         return "execute" if state.get("checked") else "finalize"
 
     def _route_after_decide_next(self, state: AgentState) -> str:
@@ -300,6 +346,7 @@ class AgentGraph:
         b_graph = StateGraph(AgentState)
         b_graph.add_node("decide_tool", self._n_decide_tool)
         b_graph.add_node("validate", self._n_validate)
+        b_graph.add_node("confirm", self._n_confirm)
         b_graph.add_node("execute", self._n_execute)
         b_graph.add_node("analyze", self._n_analyze)
         b_graph.add_node("decide_next", self._n_decide_next)
@@ -314,6 +361,11 @@ class AgentGraph:
         b_graph.add_conditional_edges(
             "validate",
             self._route_after_validate,
+            {"execute": "confirm", "finalize": "finalize"}
+        )
+        b_graph.add_conditional_edges(
+            "confirm",
+            self._route_after_confirm,
             {"execute": "execute", "finalize": "finalize"}
         )
         b_graph.add_edge("execute", "analyze")
@@ -324,7 +376,7 @@ class AgentGraph:
             {"decide_tool": "decide_tool", "finalize": "finalize"}
         )
         b_graph.add_edge("finalize", END)
-        return b_graph.compile()
+        return b_graph.compile(checkpointer=self.checkpointer)
 
     def diagnose(self, question: str) -> DiagnosticResult:
         initial_state: dict[str, Any] = {
@@ -335,16 +387,24 @@ class AgentGraph:
             "errors": [],
             "analyses": []
         }
-        final = self.graph.invoke(
-            initial_state,
-            config={"recursion_limit": self.max_iterations * 6 + 5}
-        )
-        errors = final.get("errors", [])
+
+        config = {
+            "configurable": {"thread_id": str(uuid4())},
+            "recursion_limit": self.max_iterations * 7 + 5
+        }
+
+        result = self.graph.invoke(initial_state, config=config)
+        while "__interrupt__" in result:
+            payload = result["__interrupt__"][0].value
+            answer = self.confirm_callback(payload)
+            result = self.graph.invoke(Command(resume=answer), config=config)
+
+        errors = result.get("errors", [])
         return DiagnosticResult(
             question=question,
-            history=final.get("history", []),
-            analyses=final.get("analyses", []),
-            iteration=final.get("iteration", 0),
-            final_answer=final.get("final_answer", ""),
+            history=result.get("history", []),
+            analyses=result.get("analyses", []),
+            iteration=result.get("iteration", 0),
+            final_answer=result.get("final_answer", ""),
             error="; ".join(errors) if errors else None
         )
