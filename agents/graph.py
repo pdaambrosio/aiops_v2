@@ -315,7 +315,12 @@ class AgentGraph:
         message = [
             SystemMessage(content=SYSTEM_FINALIZE),
             HumanMessage(
-                content=mount_end_human_choice(state["question"], history, analyses)
+                content=mount_end_human_choice(
+                    state["question"],
+                    history,
+                    analyses,
+                    state.get("conversation", [])
+                )
             )
         ]
         result = self._invoke_with_retry(self.llm, message, "finalize")
