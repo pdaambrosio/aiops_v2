@@ -1,9 +1,3 @@
-"""
-It does not replace the LLM's interpretation—it merely
-prepares/cleans the text and flags obvious problem
-keywords to provide context for the final analysis.
-"""
-
 from utils import get_logger
 logger = get_logger(__name__)
 

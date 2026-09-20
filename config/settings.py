@@ -10,8 +10,8 @@ UTILS_DIR = PROJECT_ROOT / "utils"
 TESTS_DIR = PROJECT_ROOT / "tests"
 
 # Model LLM base (local)
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:latest")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:12434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "docker.io/ai/llama3.2:latest")
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.3"))
 LLM_TOOL_TEMPERATURE = float(os.getenv("LLM_TOOL_TEMPERATURE", "0.0"))
 OLLAMA_NUM_GPU = int(os.getenv("OLLAMA_NUM_GPU", "8"))
