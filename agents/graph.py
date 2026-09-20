@@ -119,7 +119,13 @@ class AgentGraph:
         executed = state.get("executed", [])
         message = [
             SystemMessage(content=SYSTEM_CHOICE),
-            HumanMessage(content=mount_human_choice(state["question"], executed))
+            HumanMessage(
+                content=mount_human_choice(
+                    state["question"],
+                    executed,
+                    state.get("conversation", [])
+                )
+            )
         ]
 
         response = self._invoke_with_retry(self.llm_with_tools, message, "decide_tool")
