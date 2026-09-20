@@ -15,6 +15,9 @@ Regras:
 - Se a pergunta cobrir MAIS DE UM assunto (ex.: cpu e memória, ou disco e rede),
   chame TODAS as tools relevantes nesta mesma rodada, em vez de uma por vez.
 - Não repita uma tool já executada nesta investigação.
+- Se a pergunta atual fizer referência a algo da conversa anterior (ex.: "esse
+  container", "aquele processo", "e a CPU?"), use o contexto da conversa
+  fornecido para resolver a referência antes de escolher a tool.
 """
 
 SYSTEM_ANALYSIS = """
