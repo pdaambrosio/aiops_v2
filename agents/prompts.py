@@ -152,21 +152,34 @@ def mount_next_human_choice(
 
 
 def mount_end_human_choice(
-    question: str, history: list[dict], analyses: list[str] | tuple = ()
+        question: str,
+        history: list[dict],
+        analyses: list[str] | tuple = (),
+        conversation: list[dict] |tuple = ()
 ) -> str:
-    """Message of node end with history"""
-    lines = [f"Pergunta do usuário: {question}", "", "Comandos executados:"]
+    """Message of node end_decide with history"""
+    lines = []
+    if conversation:
+        lines.append("Conversa até agora nesta sessão:")
+        for turn in conversation:
+            lines.append(f"- Pergunta: {turn['question']}")
+            lines.append(f" Resposta: {turn['answer']}")
+        lines.append("")
+
+    lines.append(f"Pergunta do usuário: {question}")
+    lines.append("")
+    lines.append("Comandos executados:")
     for i, step in enumerate(history, start=1):
         alerts = ", ".join(step.get("alertas") or []) or "nenhum"
         lines.append(
             f"{i}, $ {step.get('comando')}\n"
-            f"   saída: {step.get('saida')}\n"
+            f"   saída: {step.get('saída')}\n"
             f"   alertas: {alerts}"
         )
 
     if analyses:
-        lines.append("\nAnálises:")
+        lines.append("\nAnalises:")
         lines.extend(f"- {analysis}" for analysis in analyses)
 
-    lines.append("\nEscreva a resposta final consolidada ao usuário.")
+    lines.append("\nEscreva a resposta final consolidada do usuário.")
     return "\n".join(lines)
