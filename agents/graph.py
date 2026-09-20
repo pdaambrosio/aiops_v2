@@ -31,6 +31,7 @@ logger = get_logger(__name__)
 MAX_ITERATIONS = 3
 MAX_LLM_RETRIES = 3
 MAX_PARALLEL_COMMANDS = 4
+MAX_CONVERSATION_TURNS = 5
 
 
 class NextDecision(BaseModel):
@@ -43,6 +44,7 @@ class AgentState(TypedDict, total=False):
     """Shared state between graph nodes"""
     question: str
     iteration: int
+    conversation: list[dict]
     # history (accumulates across iterations)
     history: Annotated[list[dict], operator.add]
     executed: Annotated[list[str], operator.add]
@@ -75,12 +77,15 @@ class AgentGraph:
         max_iterations: int = MAX_ITERATIONS,
         max_llm_retries: int = MAX_LLM_RETRIES,
         max_parallel: int = MAX_PARALLEL_COMMANDS,
+        max_conversation_turns: int = MAX_CONVERSATION_TURNS,
         confirm_callback: Callable[[list[dict]], str] | None = None
     ) -> None:
         self.max_iterations = max_iterations
         self.max_llm_retries = max_llm_retries
         self.max_parallel = max_parallel
+        self.max_conversation_turns = max_conversation_turns
         self.confirm_callback = confirm_callback or self._default_confirm_callback
+        self.max_conversation: list[dict] = []
         self.llm = get_llm()
         self.llm_decision = get_llm(LLM_TOOL_TEMPERATURE)
         self.tools = build_tools()
