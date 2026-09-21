@@ -31,6 +31,7 @@ logger = get_logger(__name__)
 MAX_ITERATIONS = 3
 MAX_LLM_RETRIES = 3
 MAX_PARALLEL_COMMANDS = 4
+MAX_CONVERSATION_TURNS = 5
 
 
 class NextDecision(BaseModel):
@@ -43,6 +44,7 @@ class AgentState(TypedDict, total=False):
     """Shared state between graph nodes"""
     question: str
     iteration: int
+    conversation: list[dict]
     # history (accumulates across iterations)
     history: Annotated[list[dict], operator.add]
     executed: Annotated[list[str], operator.add]
@@ -75,12 +77,15 @@ class AgentGraph:
         max_iterations: int = MAX_ITERATIONS,
         max_llm_retries: int = MAX_LLM_RETRIES,
         max_parallel: int = MAX_PARALLEL_COMMANDS,
+        max_conversation_turns: int = MAX_CONVERSATION_TURNS,
         confirm_callback: Callable[[list[dict]], str] | None = None
     ) -> None:
         self.max_iterations = max_iterations
         self.max_llm_retries = max_llm_retries
         self.max_parallel = max_parallel
+        self.max_conversation_turns = max_conversation_turns
         self.confirm_callback = confirm_callback or self._default_confirm_callback
+        self.conversation: list[dict] = []
         self.llm = get_llm()
         self.llm_decision = get_llm(LLM_TOOL_TEMPERATURE)
         self.tools = build_tools()
@@ -114,7 +119,13 @@ class AgentGraph:
         executed = state.get("executed", [])
         message = [
             SystemMessage(content=SYSTEM_CHOICE),
-            HumanMessage(content=mount_human_choice(state["question"], executed))
+            HumanMessage(
+                content=mount_human_choice(
+                    state["question"],
+                    executed,
+                    state.get("conversation", [])
+                )
+            )
         ]
 
         response = self._invoke_with_retry(self.llm_with_tools, message, "decide_tool")
@@ -275,7 +286,8 @@ class AgentGraph:
             )
         ]
         decision = self._invoke_with_retry(
-            self.llm_decision.with_structured_output(NextDecision), message, "decide_next"
+            self.llm_decision.with_structured_output(NextDecision, method="function_calling"),
+            message, "decide_next"
         )
         if decision is None:
             logger.warning("decide_next: sem decisão do modelo; finalizando.")
@@ -304,7 +316,12 @@ class AgentGraph:
         message = [
             SystemMessage(content=SYSTEM_FINALIZE),
             HumanMessage(
-                content=mount_end_human_choice(state["question"], history, analyses)
+                content=mount_end_human_choice(
+                    state["question"],
+                    history,
+                    analyses,
+                    state.get("conversation", [])
+                )
             )
         ]
         result = self._invoke_with_retry(self.llm, message, "finalize")
@@ -382,6 +399,7 @@ class AgentGraph:
         initial_state: dict[str, Any] = {
             "question": question,
             "iteration": 0,
+            "conversation": self.conversation[-self.max_conversation_turns:],
             "history": [],
             "executed": [],
             "errors": [],
@@ -400,11 +418,20 @@ class AgentGraph:
             result = self.graph.invoke(Command(resume=answer), config=config)
 
         errors = result.get("errors", [])
+        final_answer = result.get("final_answer", "")
+
+        self.conversation.append(
+            {
+                "pergunta": question,
+                "resposta": final_answer
+            }
+        )
+
         return DiagnosticResult(
             question=question,
             history=result.get("history", []),
             analyses=result.get("analyses", []),
             iteration=result.get("iteration", 0),
-            final_answer=result.get("final_answer", ""),
+            final_answer=final_answer,
             error="; ".join(errors) if errors else None
         )
