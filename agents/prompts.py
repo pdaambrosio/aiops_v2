@@ -15,6 +15,9 @@ Regras:
 - Se a pergunta cobrir MAIS DE UM assunto (ex.: cpu e memória, ou disco e rede),
   chame TODAS as tools relevantes nesta mesma rodada, em vez de uma por vez.
 - Não repita uma tool já executada nesta investigação.
+- Se a pergunta atual fizer referência a algo da conversa anterior (ex.: "esse
+  container", "aquele processo", "e a CPU?"), use o contexto da conversa
+  fornecido para resolver a referência antes de escolher a tool.
 """
 
 SYSTEM_ANALYSIS = """
@@ -92,17 +95,37 @@ def setup_human_analysis(question: str, tool: str, observation: str) -> str:
     )
 
 
-def mount_human_choice(question: str, executed: list[str]) -> str:
+def mount_human_choice(
+        question: str,
+        executed: list[str],
+        conversation: list[dict] | tuple = ()
+) -> str:
     """Message of node decide_tool with history"""
-    if not executed:
+    if not executed and not conversation:
         return question
 
-    executed_list = ", ".join(executed)
-    return (
-        f"Pergunta do usuário: {question}\n\n"
-        f"Comandos já executados nesta investigação: {executed_list}.\n"
-        "Escolha a proxima tool mais útil (evite repetir as já executadas)."
-    )
+    lines = []
+    if conversation:
+        lines.append("Conversa até agora nesta sessão:")
+        for turn in conversation:
+            lines.append(f"- Pergunta: {turn['pergunta']}")
+            lines.append(f" Resposta: {turn['resposta']}")
+        lines.append("")
+
+    lines.append(f"Pergunta atual do usuário: {question}")
+
+    if executed:
+        executed_list = ", ".join(executed)
+        lines.append(f"\nComandos já executados nesta investigação: {executed_list}")
+        lines.append("Escolha a proxima tool mais útil (evite repetir as que já foram executadas).")
+    else:
+        lines.append(
+            "\nSe a pergunta se referir a algo da conversa anterior "
+            "(ex.: 'esse container', 'aquele processo'), use o contexto acima "
+            "para escolher a tool certa."
+        )
+
+    return "\n".join(lines)
 
 
 def mount_human_analysis(question: str, observations: list[str]) -> str:
@@ -132,10 +155,23 @@ def mount_next_human_choice(
 
 
 def mount_end_human_choice(
-    question: str, history: list[dict], analyses: list[str] | tuple = ()
+        question: str,
+        history: list[dict],
+        analyses: list[str] | tuple = (),
+        conversation: list[dict] |tuple = ()
 ) -> str:
-    """Message of node end with history"""
-    lines = [f"Pergunta do usuário: {question}", "", "Comandos executados:"]
+    """Message of node end_decide with history"""
+    lines = []
+    if conversation:
+        lines.append("Conversa até agora nesta sessão:")
+        for turn in conversation:
+            lines.append(f"- Pergunta: {turn['pergunta']}")
+            lines.append(f" Resposta: {turn['resposta']}")
+        lines.append("")
+
+    lines.append(f"Pergunta do usuário: {question}")
+    lines.append("")
+    lines.append("Comandos executados:")
     for i, step in enumerate(history, start=1):
         alerts = ", ".join(step.get("alertas") or []) or "nenhum"
         lines.append(
@@ -145,8 +181,8 @@ def mount_end_human_choice(
         )
 
     if analyses:
-        lines.append("\nAnálises:")
+        lines.append("\nAnalises:")
         lines.extend(f"- {analysis}" for analysis in analyses)
 
-    lines.append("\nEscreva a resposta final consolidada ao usuário.")
+    lines.append("\nEscreva a resposta final consolidada do usuário.")
     return "\n".join(lines)
