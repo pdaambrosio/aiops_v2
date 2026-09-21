@@ -286,7 +286,8 @@ class AgentGraph:
             )
         ]
         decision = self._invoke_with_retry(
-            self.llm_decision.with_structured_output(NextDecision), message, "decide_next"
+            self.llm_decision.with_structured_output(NextDecision, method="function_calling"),
+            message, "decide_next"
         )
         if decision is None:
             logger.warning("decide_next: sem decisão do modelo; finalizando.")
