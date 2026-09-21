@@ -108,8 +108,8 @@ def mount_human_choice(
     if conversation:
         lines.append("Conversa até agora nesta sessão:")
         for turn in conversation:
-            lines.append(f"- Pergunta: {turn['question']}")
-            lines.append(f" Resposta: {turn['answer']}")
+            lines.append(f"- Pergunta: {turn['pergunta']}")
+            lines.append(f" Resposta: {turn['resposta']}")
         lines.append("")
 
     lines.append(f"Pergunta atual do usuário: {question}")
@@ -165,8 +165,8 @@ def mount_end_human_choice(
     if conversation:
         lines.append("Conversa até agora nesta sessão:")
         for turn in conversation:
-            lines.append(f"- Pergunta: {turn['question']}")
-            lines.append(f" Resposta: {turn['answer']}")
+            lines.append(f"- Pergunta: {turn['pergunta']}")
+            lines.append(f" Resposta: {turn['resposta']}")
         lines.append("")
 
     lines.append(f"Pergunta do usuário: {question}")
@@ -176,7 +176,7 @@ def mount_end_human_choice(
         alerts = ", ".join(step.get("alertas") or []) or "nenhum"
         lines.append(
             f"{i}, $ {step.get('comando')}\n"
-            f"   saída: {step.get('saída')}\n"
+            f"   saída: {step.get('saida')}\n"
             f"   alertas: {alerts}"
         )
 
