@@ -85,7 +85,7 @@ class AgentGraph:
         self.max_parallel = max_parallel
         self.max_conversation_turns = max_conversation_turns
         self.confirm_callback = confirm_callback or self._default_confirm_callback
-        self.max_conversation: list[dict] = []
+        self.conversation: list[dict] = []
         self.llm = get_llm()
         self.llm_decision = get_llm(LLM_TOOL_TEMPERATURE)
         self.tools = build_tools()
@@ -398,6 +398,7 @@ class AgentGraph:
         initial_state: dict[str, Any] = {
             "question": question,
             "iteration": 0,
+            "conversation": self.conversation[-self.max_conversation_turns:],
             "history": [],
             "executed": [],
             "errors": [],
@@ -416,11 +417,20 @@ class AgentGraph:
             result = self.graph.invoke(Command(resume=answer), config=config)
 
         errors = result.get("errors", [])
+        final_answer = result.get("final_answer", "")
+
+        self.conversation.append(
+            {
+                "pergunta": question,
+                "resposta": final_answer
+            }
+        )
+
         return DiagnosticResult(
             question=question,
             history=result.get("history", []),
             analyses=result.get("analyses", []),
             iteration=result.get("iteration", 0),
-            final_answer=result.get("final_answer", ""),
+            final_answer=final_answer,
             error="; ".join(errors) if errors else None
         )
