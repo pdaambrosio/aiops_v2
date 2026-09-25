@@ -17,6 +17,14 @@ LLM_TOOL_TEMPERATURE = float(os.getenv("LLM_TOOL_TEMPERATURE", "0.0"))
 OLLAMA_NUM_GPU = int(os.getenv("OLLAMA_NUM_GPU", "8"))
 OLLAMA_NUM_CTX = int(os.getenv("OLLAMA_NUM_CTX", "8192"))
 
+# RAG
+OLLAMA_EMBEDDINGS_MODEL = os.getenv("OLLAMA_EMBEDDINGS_MODEL", "docker.io/ai/embeddinggemma:latest")
+PLAYBOOKS_DIR = PROJECT_ROOT / "playbooks"
+CHROMA_DIR = PROJECT_ROOT / ".chroma"
+CHROMA_COLLECTION = "playbooks"
+PLAYBOOK_TOP_K = int(os.getenv("PLAYBOOK_TOP_K", "1"))
+PLAYBOOK_MAX_DISTANCE = float(os.getenv("PLAYBOOK_MAX_DISTANCE", "0.9"))+
+
 # Command executor
 COMMAND_TIMEOUT = int(os.getenv("COMMAND_TIMEOUT", "30"))
 MAX_OUTPUT_LENGTH = int(os.getenv("MAX_OUTPUT_LENGTH", "5000"))
