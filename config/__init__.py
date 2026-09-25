@@ -14,6 +14,12 @@ from .settings import (
     DEBUG,
     validate_config,
     show_configs,
+    OLLAMA_EMBEDDINGS_MODEL,
+    PLAYBOOKS_DIR,
+    CHROMA_DIR,
+    CHROMA_COLLECTION,
+    PLAYBOOK_TOP_K,
+    PLAYBOOK_MAX_DISTANCE,
 )
 
 __all__ = [
@@ -33,4 +39,10 @@ __all__ = [
     "DEBUG",
     "validate_config",
     "show_configs",
+    "OLLAMA_EMBEDDINGS_MODEL",
+    "PLAYBOOKS_DIR",
+    "CHROMA_DIR",
+    "CHROMA_COLLECTION",
+    "PLAYBOOK_TOP_K",
+    "PLAYBOOK_MAX_DISTANCE",
 ]
