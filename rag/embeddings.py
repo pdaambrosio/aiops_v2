@@ -1,0 +1,1 @@
+# TODO: Add embedding function used to index and search playbooks in ChromaDB.
