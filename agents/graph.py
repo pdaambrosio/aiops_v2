@@ -25,6 +25,7 @@ from agents.tools import _format_to_llm, build_tools
 from config import ALLOWED_COMMANDS, LLM_TOOL_TEMPERATURE
 from core import ValidationError, execute, mount_command, summarize_result
 from utils import get_logger
+from rag import search_playbook
 
 logger = get_logger(__name__)
 
@@ -45,6 +46,7 @@ class AgentState(TypedDict, total=False):
     question: str
     iteration: int
     conversation: list[dict]
+    playbook: str | None
     # history (accumulates across iterations)
     history: Annotated[list[dict], operator.add]
     executed: Annotated[list[str], operator.add]
@@ -184,7 +186,7 @@ class AgentGraph:
         return {"checked": checked, "errors": errors}
 
     def _n_confirm(self, state: AgentState) -> dict:
-        """human-in-the-loop: 'alta'/'media' needs confirmation"""
+        """human-in-the-loop: 'alta' needs confirmation"""
         checked =  state.get("checked", [])
         auto = [c for c in checked if c["seguranca"] != "alta"]
         pending = [c for c in checked if c["seguranca"] == "alta"]
@@ -296,6 +298,18 @@ class AgentGraph:
         logger.info(f"decide_next: {decision.needs_more} ({decision.reason})")
         return {"should_proceed": bool(decision.needs_more)}
 
+    def _n_retrieve_playbook(self,state: AgentState) -> dict:
+        """rag: search a playbook"""
+        alerts = [a for step in state.get("history", []) for a in (step.get("alertas") or [])]
+        query = state["question"]
+        if alerts:
+            query = f"{query} {' '.join(alerts)}"
+
+        playbook = search_playbook(query)
+        if playbook:
+            logger.info("retrieve_playbook: playbook relevante encontrado")
+        return {"playbook": playbook} if playbook else {}
+
     def _n_finalize(self, state: AgentState) -> dict:
         """merge the history into the final response"""
         history = state.get("history", [])
@@ -320,7 +334,8 @@ class AgentGraph:
                     state["question"],
                     history,
                     analyses,
-                    state.get("conversation", [])
+                    state.get("conversation", []),
+                    state.get("playbook")
                 )
             )
         ]
@@ -366,6 +381,7 @@ class AgentGraph:
         b_graph.add_node("confirm", self._n_confirm)
         b_graph.add_node("execute", self._n_execute)
         b_graph.add_node("analyze", self._n_analyze)
+        b_graph.add_node("retrieve_playbook", self._n_retrieve_playbook)
         b_graph.add_node("decide_next", self._n_decide_next)
         b_graph.add_node("finalize", self._n_finalize)
 
@@ -390,8 +406,9 @@ class AgentGraph:
         b_graph.add_conditional_edges(
             "decide_next",
             self._route_after_decide_next,
-            {"decide_tool": "decide_tool", "finalize": "finalize"}
+            {"decide_tool": "decide_tool", "finalize": "retrieve_playbook"}
         )
+        b_graph.add_edge("retrieve_playbook", "finalize")
         b_graph.add_edge("finalize", END)
         return b_graph.compile(checkpointer=self.checkpointer)
 
