@@ -83,6 +83,9 @@ foram executados, com suas análises. Escreva a resposta final em português:
 - Um comando com alerta 'comando_falhou' NÃO produziu dado: diga que aquele
   ponto não pôde ser apurado. Nunca preencha a lacuna com a saída de outro
   comando, e não afirme que não há alertas quando existem.
+- Se um trecho de runbook interno for fornecido, use-o para embasar a causa
+  provável e a recomendação. Não afirme que consultou um runbook se nenhum
+  foi fornecido no prompt.
 """
 
 
@@ -158,7 +161,8 @@ def mount_end_human_choice(
         question: str,
         history: list[dict],
         analyses: list[str] | tuple = (),
-        conversation: list[dict] |tuple = ()
+        conversation: list[dict] |tuple = (),
+        playbook: str | None = None
 ) -> str:
     """Message of node end_decide with history"""
     lines = []
@@ -183,6 +187,10 @@ def mount_end_human_choice(
     if analyses:
         lines.append("\nAnalises:")
         lines.extend(f"- {analysis}" for analysis in analyses)
+
+    if playbook:
+        lines.append("\nTrecho de runbook interno relevante (use como apoio):")
+        lines.append(playbook)
 
     lines.append("\nEscreva a resposta final consolidada do usuário.")
     return "\n".join(lines)
