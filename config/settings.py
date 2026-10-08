@@ -5,17 +5,25 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = PROJECT_ROOT / "config"
 CORE_DIR = PROJECT_ROOT / "core"
-AGENT_DIR = PROJECT_ROOT / "agent"
+AGENT_DIR = PROJECT_ROOT / "agents"
 UTILS_DIR = PROJECT_ROOT / "utils"
 TESTS_DIR = PROJECT_ROOT / "tests"
 
 # Model LLM base (local)
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:12434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "docker.io/ai/llama3.2:latest")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "docker.io/ai/qwen2.5:latest")
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.3"))
 LLM_TOOL_TEMPERATURE = float(os.getenv("LLM_TOOL_TEMPERATURE", "0.0"))
 OLLAMA_NUM_GPU = int(os.getenv("OLLAMA_NUM_GPU", "8"))
 OLLAMA_NUM_CTX = int(os.getenv("OLLAMA_NUM_CTX", "8192"))
+
+# RAG
+OLLAMA_EMBEDDINGS_MODEL = os.getenv("OLLAMA_EMBEDDINGS_MODEL", "docker.io/ai/embeddinggemma:latest")
+PLAYBOOKS_DIR = PROJECT_ROOT / "playbooks"
+CHROMA_DIR = PROJECT_ROOT / ".chroma"
+CHROMA_COLLECTION = "playbooks"
+PLAYBOOK_TOP_K = int(os.getenv("PLAYBOOK_TOP_K", "1"))
+PLAYBOOK_MAX_DISTANCE = float(os.getenv("PLAYBOOK_MAX_DISTANCE", "0.82"))
 
 # Command executor
 COMMAND_TIMEOUT = int(os.getenv("COMMAND_TIMEOUT", "30"))
