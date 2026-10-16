@@ -105,6 +105,7 @@ dependencies = [
     { name = "langchain-core" },
     { name = "langchain-ollama" },
     { name = "langgraph" },
+    { name = "pydantic" },
     { name = "pytest" },
     { name = "requests" },
 ]
@@ -115,6 +116,7 @@ requires-dist = [
     { name = "langchain-core", specifier = ">=1.4.8" },
     { name = "langchain-ollama", specifier = ">=1.1.0" },
     { name = "langgraph", specifier = ">=1.2.10" },
+    { name = "pydantic", specifier = ">=2.13.4" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "requests", specifier = ">=2.34.2" },
 ]
