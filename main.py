@@ -7,25 +7,25 @@ from utils import get_logger
 logger = get_logger("aiops_v2")
 
 
-def _print_result(llm) -> None:
+def _print_result(result) -> None:
     print()
-    for index, step in enumerate(llm.history, 1):
+    for index, step in enumerate(result.history, 1):
         command = step.get("comando") or step["tool"]
         print(f"Passo {index}: {step['tool']} -> {command}")
 
         if step.get("alertas"):
             print(f"ALERTAS: {', '.join(step['alertas'])}")
 
-    if llm.error:
-        print(f"ERROR: {llm.error}")
+    if result.error:
+        print(f"ERROR: {result.error}")
 
-    print(f"\n{llm.final_answer}")
+    print(f"\n{result.final_answer}")
 
 
 def main() -> int:
     show_configs()
     if not validate_config():
-        print("Ollama indisponível. Verifique se o serviço está rodando.")
+        print("Modelo indisponível. Verifique se o serviço está rodando.")
         return 1
 
     print("Inicializando o Agent...")
