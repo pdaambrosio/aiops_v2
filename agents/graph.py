@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.types import Command, interrupt
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel, Field
@@ -95,7 +96,11 @@ class AgentGraph:
         self.llm_decision = get_llm(LLM_TOOL_TEMPERATURE)
         self.tools = build_tools()
         self.llm_with_tools = self.llm_decision.bind_tools(self.tools)
-        self.checkpointer = MemorySaver()
+        self.checkpointer = MemorySaver(
+            serde=JsonPlusSerializer(
+                allowed_msgpack_modules=[("agents.report", "DiagnosisReport")]
+            )
+        )
         self.graph = self._build_graph()
 
     @staticmethod
@@ -147,7 +152,7 @@ class AgentGraph:
         if response is None:
             return {
                 "tools_pending": [],
-                "errors": ["O modelo de linguagem não respondeu (falha no Ollama)."]
+                "errors": ["O modelo de linguagem não respondeu."]
             }
 
         tool_calls = response.tool_calls or []
@@ -318,7 +323,12 @@ class AgentGraph:
         if alerts:
             query = f"{query} {' '.join(alerts)}"
 
-        playbook = search_playbook(query)
+        try:
+            playbook = search_playbook(query)
+        except Exception as e: # noqa: BLE001
+            logger.warning(f"retrieve_playbook: busca falhou, seguindo sem o manual(playbook).{e}")
+            return {}
+
         if playbook:
             logger.info("retrieve_playbook: playbook relevante encontrado")
         return {"playbook": playbook} if playbook else {}
