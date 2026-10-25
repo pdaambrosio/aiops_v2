@@ -1,3 +1,4 @@
+import re
 import shlex
 
 from config import ALLOWED_COMMANDS
@@ -10,6 +11,7 @@ DANGEROUS_CHARACTERS = [
     "\n", "\r", "{", "}", "[", "]", "!", "\\", "'", '"',
 ]
 
+PLACEHOLDER = re.compile(r"(?<!\{)\{[a-z_]+\}(?!\})")
 
 class ValidationError(Exception):
     """Exception raised when a validation error occurs"""
@@ -56,7 +58,7 @@ def mount_command(name: str, parameter: dict | None = None) -> str:
     else:
         command = template
 
-    if "{" in command and "}" in command:
+    if PLACEHOLDER.search(command):
         raise ValidationError(
             f"Comando '{name}' ainda tem placeholder não preenchido: {command!r}"
         )

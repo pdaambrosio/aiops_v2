@@ -26,7 +26,7 @@ def execute (command: str, timeout: int | None = None) -> dict:
             "returncode": None,
             "stdout": "",
             "stderr": "",
-            "error": f"Command timed out: {timeout}s)"
+            "error": f"Command timed out: {timeout}s"
         }
     except Exception as e: # noqa: BLE001
         logger.error(f"Command failed: {e}")

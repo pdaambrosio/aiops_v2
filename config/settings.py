@@ -45,7 +45,7 @@ def validate_config() -> bool:
 
         resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
         if resp.status_code != 200:
-            print(f"Ollama respondeu com status {resp.status_code} em {OLLAMA_BASE_URL}")
+            print(f"LLM respondeu com status {resp.status_code} em {OLLAMA_BASE_URL}")
             return False
         return True
     except Exception as e:
@@ -56,7 +56,7 @@ def validate_config() -> bool:
 def show_configs() -> None:
     """show configs"""
     print("\nCONFIGURAÇÕES")
-    print(f"  Ollama URL : {OLLAMA_BASE_URL}")
+    print(f"  LLM URL : {OLLAMA_BASE_URL}")
     print(f"  Modelo     : {OLLAMA_MODEL}")
     print(f"  Contexto   : {OLLAMA_NUM_CTX} tokens")
     print(f"  Timeout    : {COMMAND_TIMEOUT}s")
