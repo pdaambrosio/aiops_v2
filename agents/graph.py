@@ -6,11 +6,13 @@ from uuid import uuid4
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.types import Command, interrupt
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel, Field
 
 from agents.llm import get_llm
+from agents.report import DiagnosisReport, render_report
 from agents.prompts import (
     SYSTEM_ANALYSIS_MULTI,
     SYSTEM_DECIDE_NEXT,
@@ -59,6 +61,7 @@ class AgentState(TypedDict, total=False):
     # control
     should_proceed: bool
     final_answer: str
+    report: DiagnosisReport | None
 
 
 @dataclass
@@ -69,6 +72,7 @@ class DiagnosticResult:
     analyses: list[str] = field(default_factory=list)
     iteration: int = 0
     final_answer: str = ""
+    report: DiagnosisReport | None = None
     error: str | None = None
 
 
@@ -92,7 +96,11 @@ class AgentGraph:
         self.llm_decision = get_llm(LLM_TOOL_TEMPERATURE)
         self.tools = build_tools()
         self.llm_with_tools = self.llm_decision.bind_tools(self.tools)
-        self.checkpointer = MemorySaver()
+        self.checkpointer = MemorySaver(
+            serde=JsonPlusSerializer(
+                allowed_msgpack_modules=[("agents.report", "DiagnosisReport")]
+            )
+        )
         self.graph = self._build_graph()
 
     @staticmethod
@@ -106,12 +114,22 @@ class AgentGraph:
         """Invoke the LLM retrying on transient backend failures"""
         for attempt in range(1, self.max_llm_retries + 1):
             try:
-                return runnable.invoke(message, stream=False)
+                result = runnable.invoke(message, stream=False)
             except Exception as e:  # noqa: BLE001
                 logger.warning(
                     f"{label}: falha do LLM "
                     f"(tentativa {attempt}/{self.max_llm_retries}): {e}"
                 )
+                continue
+
+            if result is not None:
+                return result
+
+            logger.warning(
+                f"{label}: o modelo respondeu sem preencher o schema "
+                f"(tentativa {attempt}/{self.max_llm_retries})"
+            )
+
         logger.error(f"{label}: LLM falhou em todas as tentativas.")
         return None
 
@@ -134,7 +152,7 @@ class AgentGraph:
         if response is None:
             return {
                 "tools_pending": [],
-                "errors": ["O modelo de linguagem não respondeu (falha no Ollama)."]
+                "errors": ["O modelo de linguagem não respondeu."]
             }
 
         tool_calls = response.tool_calls or []
@@ -305,7 +323,12 @@ class AgentGraph:
         if alerts:
             query = f"{query} {' '.join(alerts)}"
 
-        playbook = search_playbook(query)
+        try:
+            playbook = search_playbook(query)
+        except Exception as e: # noqa: BLE001
+            logger.warning(f"retrieve_playbook: busca falhou, seguindo sem o manual(playbook).{e}")
+            return {}
+
         if playbook:
             logger.info("retrieve_playbook: playbook relevante encontrado")
         return {"playbook": playbook} if playbook else {}
@@ -339,8 +362,13 @@ class AgentGraph:
                 )
             )
         ]
-        result = self._invoke_with_retry(self.llm, message, "finalize")
-        if result is None:
+
+        report = self._invoke_with_retry(
+            self.llm.with_structured_output(DiagnosisReport, method="function_calling"),
+            message, "finalize"
+        )
+
+        if report is None:
             response = (
                 "Não consegui redigir a resposta final (falha no modelo), "
                 "mas os comandos abaixo foram executados:\n"
@@ -349,14 +377,14 @@ class AgentGraph:
             if analyses:
                 response += "\n\n" + "\n".join(analyses)
         else:
-            response = result.content
+            response = render_report(report)
 
         if errors:
             response = (
                 f"{response}\n\n"
                 f"[não foi possível executar: {'; '.join(errors)}]"
             )
-        return {"final_answer": response}
+        return {"final_answer": response, "report": report}
 
     # conditionals
     def _route_after_decide_tool(self, state: AgentState) -> str:
@@ -436,11 +464,12 @@ class AgentGraph:
 
         errors = result.get("errors", [])
         final_answer = result.get("final_answer", "")
+        report = result.get("report")
 
         self.conversation.append(
             {
                 "pergunta": question,
-                "resposta": final_answer
+                "resposta": report.interpretacao if report else final_answer
             }
         )
 
@@ -450,5 +479,6 @@ class AgentGraph:
             analyses=result.get("analyses", []),
             iteration=result.get("iteration", 0),
             final_answer=final_answer,
+            report=report,
             error="; ".join(errors) if errors else None
         )
