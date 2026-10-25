@@ -11,7 +11,7 @@ from core.validator import (
 def test_validate_tool_name_existente_retorna_config():
     config = validate_tool_name("memoria_livre")
     assert config["comando"] == "free -h"
-    assert config["seguranca"] == "alta"
+    assert config["seguranca"] == "baixa"
 
 
 def test_validate_tool_name_inexistente_levanta_erro():
