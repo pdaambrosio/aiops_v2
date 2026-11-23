@@ -50,8 +50,16 @@ def search_playbook(query: str, k: int = PLAYBOOK_TOP_K) -> str | None:
     documents = result["documents"][0]
     distances = result["distances"][0]
 
-    if not documents or distances[0] > PLAYBOOK_MAX_DISTANCE:
+    if not documents:
         return None
 
-    logger.info(f"playbooks: melhor match distancia={distances[0]:.4f}")
+    best_id, best_distance = result["ids"][0][0], distances[0]
+    if best_distance > PLAYBOOK_MAX_DISTANCE:
+        logger.info(
+            f"playbooks: nenhum abaixo do limiar {PLAYBOOK_MAX_DISTANCE} "
+            f"(mais próximo: {best_id}, distancia={best_distance:.4f})"
+        )
+        return None
+
+    logger.info(f"playbooks: candidato {best_id} (distancia={best_distance:.4f})")
     return documents[0]

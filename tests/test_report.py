@@ -40,7 +40,7 @@ def test_field_missing_and_rejected():
         DiagnosisReport(interpretacao="só isso")
 
 
-def interpretation_comes_before_the_decision():
+def test_interpretation_comes_before_the_decision():
     campos = list(DiagnosisReport.model_fields)
     assert campos.index("interpretacao") < campos.index("problema_detectado")
     assert campos.index("problema_detectado") < campos.index("severidade")

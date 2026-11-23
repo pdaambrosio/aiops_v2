@@ -110,3 +110,16 @@ def test_mount_command_forma_correta_de_passar_parametro():
     comando = mount_command("curl_test", {"url": "https://google.com"})
     assert "https://google.com" in comando
     assert comando == "curl -I -s -m 5 https://google.com | head -5"
+
+
+def test_mount_command_aceita_chaves_duplas_do_formato_do_docker():
+    comando = mount_command("docker_stats")
+    assert comando.startswith("docker stats --no-stream")
+    assert "{{.Container}}" in comando
+
+
+def test_placeholder_simples_continua_sendo_detectado():
+    from core.validator import PLACEHOLDER
+    assert PLACEHOLDER.search("ping -c 4 {host}")
+    assert not PLACEHOLDER.search("docker stats --format 'table {{.Container}}'")
+    assert not PLACEHOLDER.search("ping -c 4 8.8.8.8")

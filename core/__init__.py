@@ -1,5 +1,5 @@
 from core.executioner import execute
-from core.parser import detect_alerts, summarize_result
+from core.parser import detect_alerts, detect_threshold_alerts, summarize_result
 from core.validator import (
     DANGEROUS_CHARACTERS,
     ValidationError,
@@ -11,6 +11,7 @@ from core.validator import (
 __all__ = [
     "execute",
     "detect_alerts",
+    "detect_threshold_alerts",
     "summarize_result",
     "ValidationError",
     "DANGEROUS_CHARACTERS",

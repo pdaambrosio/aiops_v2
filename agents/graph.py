@@ -316,21 +316,23 @@ class AgentGraph:
         logger.info(f"decide_next: {decision.needs_more} ({decision.reason})")
         return {"should_proceed": bool(decision.needs_more)}
 
-    def _n_retrieve_playbook(self,state: AgentState) -> dict:
-        """rag: search a playbook"""
+    def _n_retrieve_playbook(self, state: AgentState) -> dict:
+        """rag: search a playbook when the investigation found alerts"""
         alerts = [a for step in state.get("history", []) for a in (step.get("alertas") or [])]
-        query = state["question"]
-        if alerts:
-            query = f"{query} {' '.join(alerts)}"
+        if not alerts:
+            logger.info("retrieve_playbook: nenhum alerta nas saídas; RAG não consultado")
+            return {}
+
+        query = f"{state['question']} {' '.join(alerts)}"
 
         try:
             playbook = search_playbook(query)
         except Exception as e: # noqa: BLE001
-            logger.warning(f"retrieve_playbook: busca falhou, seguindo sem o manual(playbook).{e}")
+            logger.warning(f"retrieve_playbook: busca falhou, seguindo sem o playbook: {e}")
             return {}
 
         if playbook:
-            logger.info("retrieve_playbook: playbook relevante encontrado")
+            logger.info("retrieve_playbook: playbook candidato injetado no prompt do finalize")
         return {"playbook": playbook} if playbook else {}
 
     def _n_finalize(self, state: AgentState) -> dict:
@@ -345,8 +347,8 @@ class AgentGraph:
                 }
             return {
                 "final_answer": (
-                    "Não consegui mapear sua pergunta para um commando de "
-                    "diagnostico conhecido. Tente reformular"
+                    "Não consegui mapear sua pergunta para um comando de "
+                    "diagnóstico conhecido. Tente reformular."
                 )
             }
         analyses = state.get("analyses", [])
