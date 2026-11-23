@@ -49,14 +49,14 @@ def validate_config() -> bool:
             return False
         return True
     except Exception as e:
-        print(f"Não foi possível conectar ao Ollama em {OLLAMA_BASE_URL}: {e}")
+        print(f"Não foi possível conectar ao servidor de modelos em {OLLAMA_BASE_URL}: {e}")
         return False
 
 
 def show_configs() -> None:
     """show configs"""
     print("\nCONFIGURAÇÕES")
-    print(f"  LLM URL : {OLLAMA_BASE_URL}")
+    print(f"  LLM URL    : {OLLAMA_BASE_URL}")
     print(f"  Modelo     : {OLLAMA_MODEL}")
     print(f"  Contexto   : {OLLAMA_NUM_CTX} tokens")
     print(f"  Timeout    : {COMMAND_TIMEOUT}s")
